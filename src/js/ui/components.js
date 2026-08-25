@@ -1,21 +1,3 @@
-// =========== Loading Spinner Design ============
-/*
-<div class="flex items-center justify-center py-12">
-    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
-</div>
-
-
-// =========== Empty State Design ============
-/*
-<div class="flex flex-col items-center justify-center py-12 text-center">
-    <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-        <i class="fa-solid fa-search text-gray-400 text-2xl"></i>
-    </div>
-    <p class="text-gray-500 text-lg">No recipes found</p>
-    <p class="text-gray-400 text-sm mt-2">Try searching for something else</p>
-</div>
-*/
-
 //===========================
 //      LOADING DESIGN
 //===========================
@@ -273,5 +255,50 @@ export function allAreasButton() {
         data-area="">
         All Cuisines
     </button>
+    `;
+}
+
+//===========================
+//      MEAL DETAILS
+//===========================
+export function mealDetails(meal) {
+    return `
+        <div class="bg-white rounded-2xl shadow-lg overflow-hidden mb-8">
+
+            <div class="relative h-80 md:h-96">
+
+                <img
+                    src="${meal.thumbnail}"
+                    alt="${meal.name}"
+                    class="w-full h-full object-cover"
+                />
+
+                <div
+                    class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"
+                ></div>
+
+                <div class="absolute bottom-0 left-0 right-0 p-8">
+
+                    <div class="flex items-center gap-3 mb-3">
+
+                        <span class="px-3 py-1 bg-emerald-500 text-white text-sm font-semibold rounded-full">
+                            ${meal.category}
+                        </span>
+
+                        <span class="px-3 py-1 bg-blue-500 text-white text-sm font-semibold rounded-full">
+                            ${meal.area}
+                        </span>
+
+                    </div>
+
+                    <h1 class="text-3xl md:text-4xl font-bold text-white mb-2">
+                        ${meal.name}
+                    </h1>
+
+                </div>
+
+            </div>
+
+        </div>
     `;
 }

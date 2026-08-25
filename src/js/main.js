@@ -1,8 +1,8 @@
 //==========================
 //    IMPORT FUNCTIONS
 //==========================
-import { getMeals, getCategories, getAreas, filterMeals, searchMeals } from "./api/mealdb.js";
-import { mealCard, categoryCard, areaButton, allAreasButton, loadingSpinner, emptyState } from "./ui/components.js";
+import { getMeals, getCategories, getAreas, filterMeals, searchMeals, getMealById, analyzeNutrition } from "./api/mealdb.js";
+import { mealCard, categoryCard, areaButton, allAreasButton, loadingSpinner, emptyState, mealDetails } from "./ui/components.js";
 
 //==================================
 //  RECIPES COUNT & GRID DEFFINING
@@ -44,6 +44,20 @@ function displayMeals(data, type = "", value = "") {
 
     for (let meal of data.results) {
         recipesGrid.innerHTML += mealCard(meal);
+    }
+
+    const mealCards = document.querySelectorAll(".recipe-card");
+
+    for (let card of mealCards) {
+
+        card.addEventListener("click", async function () {
+
+            const mealId = card.dataset.mealId;
+            const data = await getMealById(mealId);
+            const meal = data.result;
+
+            console.log(meal);
+        });
     }
 }
 
