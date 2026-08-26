@@ -82,6 +82,7 @@ foodLogNav.addEventListener("click", function (e) {
     scannerSection.classList.add("hidden");
     foodLogSection.classList.remove("hidden");
     setActiveNav(foodLogNav);
+    updateFoodLog();
 });
 
 //==========================
@@ -166,7 +167,8 @@ confirmLogMeal.addEventListener("click", function () {
     const foodLog = JSON.parse(localStorage.getItem("foodLog")) || [];
     foodLog.push(loggedMeal);
     localStorage.setItem("foodLog", JSON.stringify(foodLog));
-
+    updateFoodLog();
+    updateWeeklyOverview();
     logMealModal.classList.add("hidden");
     logMealModal.classList.remove("flex");
 
@@ -337,6 +339,272 @@ function displayMeals(data, type = "", value = "") {
 }
 
 //==========================
+//      UPDATE DATE
+//==========================
+function updateFoodLogDate() {
+
+    const today = new Date();
+    const dateText = today.toLocaleDateString("en-US", {
+        weekday: "long",
+        month: "short",
+        day: "numeric"
+    });
+    document.getElementById("foodlog-date").innerText = dateText;
+}
+
+//==========================
+//      UPDATE FOOD LOG
+//==========================
+function updateFoodLog() {
+
+    const foodLog = JSON.parse(localStorage.getItem("foodLog")) || [];
+
+    //==========================
+    //       GET TODAY
+    //==========================
+    const today = new Date().toDateString();
+
+    const todayMeals = foodLog.filter(function (meal) {
+        return new Date(meal.date).toDateString() === today;
+    });
+
+    //==========================
+    //     CALCULATE TOTALS
+    //==========================
+    let totalCalories = 0;
+    let totalProtein = 0;
+    let totalCarbs = 0;
+    let totalFat = 0;
+
+    for (let meal of todayMeals) {
+
+        totalCalories += meal.calories;
+        totalProtein += meal.protein;
+        totalCarbs += meal.carbs;
+        totalFat += meal.fat;
+    }
+
+    //==========================
+    //       GOALS
+    //==========================
+    const calorieGoal = 2000;
+    const proteinGoal = 50;
+    const carbsGoal = 250;
+    const fatGoal = 65;
+
+    //==========================
+    //      UPDATE TEXT
+    //==========================
+    document.getElementById("foodlog-calories-text").innerText = `${totalCalories} / ${calorieGoal} kcal`;
+    document.getElementById("foodlog-protein-text").innerText = `${totalProtein} / ${proteinGoal} g`;
+    document.getElementById("foodlog-carbs-text").innerText = `${totalCarbs} / ${carbsGoal} g`;
+    document.getElementById("foodlog-fat-text").innerText = `${totalFat} / ${fatGoal} g`;
+
+    //==========================
+    //      PROGRESS %
+    //==========================
+    const caloriesPercent = Math.min((totalCalories / calorieGoal) * 100, 100);
+    const proteinPercent = Math.min((totalProtein / proteinGoal) * 100, 100);
+    const carbsPercent = Math.min((totalCarbs / carbsGoal) * 100, 100);
+    const fatPercent = Math.min((totalFat / fatGoal) * 100, 100);
+
+    //==========================
+    //       UPDATE BARS
+    //==========================
+    document.getElementById("foodlog-calories-bar").style.width = `${caloriesPercent}%`;
+    document.getElementById("foodlog-protein-bar").style.width = `${proteinPercent}%`;
+    document.getElementById("foodlog-carbs-bar").style.width = `${carbsPercent}%`;
+    document.getElementById("foodlog-fat-bar").style.width = `${fatPercent}%`;
+
+    //==========================
+    //       LOGGED ITEMS
+    //==========================
+    const loggedItemsList = document.getElementById("logged-items-list");
+    const loggedItemsTitle = document.querySelector("#foodlog-today-section h4");
+    const clearButton = document.getElementById("clear-foodlog");
+
+    loggedItemsTitle.innerText = `Logged Items (${todayMeals.length})`;
+
+    //==========================
+    //       EMPTY STATE
+    //==========================
+    if (todayMeals.length === 0) {
+
+        loggedItemsList.innerHTML = `
+            <div class="text-center py-8 text-gray-500">
+                <i class="fa-solid fa-utensils text-4xl mb-3 text-gray-300"></i>
+                <p class="font-medium">No meals logged today</p>
+                <p class="text-sm">Add meals from the Meals page or scan products</p>
+            </div>
+        `;
+
+        clearButton.style.display = "none";
+
+        updateFoodLogDate();
+        updateWeeklyOverview();
+        return;
+    }
+
+    clearButton.style.display = "block";
+
+    //==========================
+    //      DISPLAY MEALS
+    //==========================
+    loggedItemsList.innerHTML = "";
+
+    for (let i = 0; i < todayMeals.length; i++) {
+
+        let meal = todayMeals[i];
+
+        const mealTime = new Date(meal.date).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+
+        loggedItemsList.innerHTML += `
+            <div class="bg-gray-50 rounded-xl p-4 flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <img src="${meal.thumbnail}" alt="${meal.name}" class="w-16 h-16 rounded-xl object-cover">
+                    <div>
+                        <h5 class="font-bold text-gray-900">
+                            ${meal.name}
+                        </h5>
+                        <p class="text-sm text-gray-500">
+                            ${meal.servings} servings
+                            <span class="mx-1">•</span>
+                            <span class="text-emerald-600">Recipe</span>
+                        </p>
+                        <p class="text-xs text-gray-400 mt-1">${mealTime}</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="text-right">
+                        <p class="text-xl font-bold text-emerald-600">${meal.calories}</p>
+                        <p class="text-xs text-gray-500">kcal</p>
+                    </div>
+                    <span class="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg text-sm">${meal.protein}g P</span>
+                    <span class="px-3 py-1 bg-amber-50 text-amber-600 rounded-lg text-sm">${meal.carbs}g C</span>
+                    <span class="px-3 py-1 bg-purple-50 text-purple-600 rounded-lg text-sm">${meal.fat}g F</span>
+                    <button onclick="deleteMeal(${i})" class="text-gray-400 hover:text-red-500 transition-colors">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+    updateFoodLogDate();
+}
+
+//==========================
+//       DELETE MEAL
+//==========================
+function deleteMeal(index) {
+    const foodLog = JSON.parse(localStorage.getItem("foodLog")) || [];
+    foodLog.splice(index, 1);
+    localStorage.setItem("foodLog", JSON.stringify(foodLog));
+    updateFoodLog();
+}
+window.deleteMeal = deleteMeal;
+
+//==========================
+//     CLEAR FOOD LOG
+//==========================
+const clearFoodLog = document.getElementById("clear-foodlog");
+
+clearFoodLog.addEventListener("click", function () {
+
+    Swal.fire({
+        title: "Clear Food Log?",
+        text: "All today's meals will be removed.",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Yes, clear it",
+        cancelButtonText: "Cancel",
+        confirmButtonColor: "#ef4444"
+    }).then(function (result) {
+
+        if (result.isConfirmed) {
+
+            localStorage.removeItem("foodLog");
+            updateFoodLog();
+
+            Swal.fire({
+                icon: "success",
+                title: "Cleared!",
+                text: "Your food log has been cleared.",
+                confirmButtonColor: "#10b981"
+            });
+        }
+    });
+
+});
+
+//==========================
+//  UPDATE WEEKLY OVERVIEW
+//==========================
+function updateWeeklyOverview() {
+
+    const foodLog = JSON.parse(localStorage.getItem("foodLog")) || [];
+    const weeklyChart = document.getElementById("weekly-chart");
+    const today = new Date();
+    const days = [];
+
+    // Get last 7 days
+    for (let i = 6; i >= 0; i--) {
+
+        const date = new Date(today);
+        date.setDate(today.getDate() - i);
+        days.push(date);
+    }
+
+    let weeklyHTML = `<div class="grid grid-cols-7 gap-2 w-full h-full items-center">`;
+
+    for (let date of days) {
+
+        const dateString = date.toDateString();
+
+        // Get meals for this day
+        const dayMeals = foodLog.filter(function (meal) {
+            return new Date(meal.date).toDateString() === dateString;
+        });
+
+        // Calculate calories
+        let totalCalories = 0;
+
+        for (let meal of dayMeals) {
+            totalCalories += meal.calories;
+        }
+
+        const isToday = date.toDateString() === today.toDateString();
+        const dayName = date.toLocaleDateString("en-US", { weekday: "short" });
+        const dayNumber = date.getDate();
+
+        if (isToday) {
+            weeklyHTML += `
+                <div class="h-40 rounded-xl bg-indigo-100 flex flex-col items-center justify-center">
+                    <p class="text-sm text-gray-500">${dayName}</p>
+                    <p class="text-lg font-semibold text-gray-900 mb-3">${dayNumber}</p>
+                    <p class="text-2xl font-bold text-emerald-600">${totalCalories}</p>
+                    <p class="text-xs text-emerald-600">kcal</p>
+                    <p class="text-xs text-gray-500 mt-2">${dayMeals.length} ${dayMeals.length === 1 ? "item" : "items"}</p>
+                </div>
+            `;
+
+        }
+        else {
+            weeklyHTML += `
+                <div class="h-40 flex flex-col items-center justify-center rounded-xl">
+                    <p class="text-sm text-gray-500">${dayName}</p>
+                    <p class="text-lg font-semibold text-gray-900 mb-3">${dayNumber}</p>
+                    <p class="text-2xl font-bold text-gray-300">${totalCalories}</p>
+                    <p class="text-xs text-gray-300">kcal</p>
+                </div>
+            `;
+        }
+    }
+
+    weeklyHTML += `</div>`;
+    weeklyChart.innerHTML = weeklyHTML;
+}
+
+//==========================
 //    START APP FUNCTION
 //==========================
 async function startApp() {
@@ -447,6 +715,7 @@ async function startApp() {
 
         displayMeals(data, "search", query)
     });
+    updateFoodLog();
 }
 
 startApp();
