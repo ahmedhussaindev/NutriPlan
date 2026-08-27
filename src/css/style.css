@@ -1,3 +1,22 @@
 .loading {
-  display:none
+  display: none
+}
+
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 30;
+}
+
+.sidebar-overlay.active {
+  display: block;
+}
+
+#sidebar {
+  transition: transform 0.3s ease;
+}
+
+#sidebar.active {
+  transform: translateX(0);
 }

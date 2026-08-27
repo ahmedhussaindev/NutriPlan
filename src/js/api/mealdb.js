@@ -3,6 +3,7 @@
 //==========================
 const BASE_URL = "https://nutriplan-api.vercel.app/api/meals";
 const NUTRITION_URL = "https://nutriplan-api.vercel.app/api/nutrition";
+const PRODUCTS_URL = "https://nutriplan-api.vercel.app/api/products";
 
 //==========================
 //    GET MEALS FUNCTION
@@ -83,6 +84,42 @@ export async function analyzeNutrition(recipeName, ingredients) {
         })
     });
 
+    const data = await response.json();
+    return data;
+}
+
+//===========================
+//   SEARCH PRODUCTS
+//===========================
+export async function searchProducts(query) {
+    const response = await fetch(`${PRODUCTS_URL}/search?q=${query}&page=1&limit=24`);
+    const data = await response.json();
+    return data;
+}
+
+//===========================
+//   PRODUCT BY BARCODE
+//===========================
+export async function getProductByBarcode(barcode) {
+    const response = await fetch(`${PRODUCTS_URL}/barcode/${barcode}`);
+    const data = await response.json();
+    return data;
+}
+
+//===========================
+//   PRODUCT CATEGORIES
+//===========================
+export async function getProductCategories() {
+    const response = await fetch(`${PRODUCTS_URL}/categories`);
+    const data = await response.json();
+    return data;
+}
+
+//===========================
+//   PRODUCTS BY CATEGORY
+//===========================
+export async function getProductsByCategory(category) {
+    const response = await fetch(`${PRODUCTS_URL}/category/${category}?page=1&limit=24`);
     const data = await response.json();
     return data;
 }

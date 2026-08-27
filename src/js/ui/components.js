@@ -257,3 +257,61 @@ export function allAreasButton() {
     </button>
     `;
 }
+
+//===========================
+//      PRODUCT CARD
+//===========================
+export function productCard(product) {
+
+    const nutrition = product.nutrients;
+
+    return `
+        <div class="product-card bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all cursor-pointer group"
+            data-barcode="${product.barcode}">
+            <div class="relative h-40 bg-gray-100 flex items-center justify-center overflow-hidden">
+                <img class="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300"
+                    src="${product.image || 'https://via.placeholder.com/400x300?text=No+Image'}"
+                    alt="${product.name}"
+                    loading="lazy"/>
+                <!-- Nutri-Score Badge -->
+                <div class="absolute top-2 left-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded uppercase">
+                    Nutri-Score ${product.nutritionGrade || "Unknown"}
+                </div>
+                <!-- NOVA Badge -->
+                ${product.novaGroup ? `
+                <div
+                    class="absolute top-2 right-2 bg-lime-500 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center"
+                    title="NOVA ${product.novaGroup}">
+                    ${product.novaGroup}
+                </div> ` : ""}
+            </div>
+            <div class="p-4">
+                <p class="text-xs text-emerald-600 font-semibold mb-1 truncate">${product.brand || "Unknown Brand"}</p>
+                <h3 class="font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-emerald-600 transition-colors">${product.name}</h3>
+                <div class="flex items-center gap-3 text-xs text-gray-500 mb-3">
+                    <span><i class="fa-solid fa-barcode mr-1"></i>${product.barcode}</span>
+                    <span><i class="fa-solid fa-fire mr-1"></i> ${Math.round(nutrition.calories)} kcal/100g</span>
+                </div>
+                <!-- Mini Nutrition -->
+                <div class="grid grid-cols-4 gap-1 text-center">
+                    <div class="bg-emerald-50 rounded p-1.5">
+                        <p class="text-xs font-bold text-emerald-700"> ${nutrition.protein}g</p>
+                        <p class="text-[10px] text-gray-500">Protein</p>
+                    </div>
+                    <div class="bg-blue-50 rounded p-1.5">
+                        <p class="text-xs font-bold text-blue-700">${nutrition.carbs}g</p>
+                        <p class="text-[10px] text-gray-500">Carbs</p>
+                    </div>
+                    <div class="bg-purple-50 rounded p-1.5">
+                        <p class="text-xs font-bold text-purple-700">${nutrition.fat}g</p>
+                        <p class="text-[10px] text-gray-500">Fat</p>
+                    </div>
+                    <div class="bg-orange-50 rounded p-1.5">
+                        <p class="text-xs font-bold text-orange-700">${nutrition.sugar}g</p>
+                        <p class="text-[10px] text-gray-500">Sugar</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}

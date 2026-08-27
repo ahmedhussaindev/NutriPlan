@@ -1,8 +1,8 @@
 //==========================
 //    IMPORT FUNCTIONS
 //==========================
-import { getMeals, getCategories, getAreas, filterMeals, searchMeals, getMealById, analyzeNutrition } from "./api/mealdb.js";
-import { mealCard, categoryCard, areaButton, allAreasButton, loadingSpinner, emptyState } from "./ui/components.js";
+import { getMeals, getCategories, getAreas, filterMeals, searchMeals, getMealById, analyzeNutrition, searchProducts, getProductByBarcode, getProductCategories, getProductsByCategory } from "./api/mealdb.js";
+import { mealCard, categoryCard, areaButton, allAreasButton, loadingSpinner, emptyState, productCard } from "./ui/components.js";
 
 //==================================
 //  RECIPES COUNT & GRID DEFFINING
@@ -27,6 +27,17 @@ const mealCategoriesSection = document.getElementById("meal-categories-section")
 const scannerSection = document.getElementById("products-section");
 const foodLogSection = document.getElementById("foodlog-section");
 
+//==========================
+//        PRODUCTS
+//==========================
+const productsGrid = document.getElementById("products-grid");
+const productsCount = document.getElementById("products-count");
+const productSearchInput = document.getElementById("product-search-input");
+const searchProductBtn = document.getElementById("search-product-btn");
+const barcodeInput = document.getElementById("barcode-input");
+const lookupBarcodeBtn = document.getElementById("lookup-barcode-btn");
+const productCategories = document.getElementById("product-categories");
+const nutriScoreButtons = document.querySelectorAll(".nutri-score-filter");
 
 //==========================
 //       SIDEBAR NAV
@@ -441,7 +452,6 @@ function updateFoodLog() {
         clearButton.style.display = "none";
 
         updateFoodLogDate();
-        updateWeeklyOverview();
         return;
     }
 
@@ -490,6 +500,7 @@ function updateFoodLog() {
         `;
     }
     updateFoodLogDate();
+    updateWeeklyOverview();
 }
 
 //==========================
@@ -500,6 +511,7 @@ function deleteMeal(index) {
     foodLog.splice(index, 1);
     localStorage.setItem("foodLog", JSON.stringify(foodLog));
     updateFoodLog();
+    updateWeeklyOverview();
 }
 window.deleteMeal = deleteMeal;
 
@@ -524,6 +536,7 @@ clearFoodLog.addEventListener("click", function () {
 
             localStorage.removeItem("foodLog");
             updateFoodLog();
+            updateWeeklyOverview();
 
             Swal.fire({
                 icon: "success",
@@ -603,6 +616,392 @@ function updateWeeklyOverview() {
     weeklyHTML += `</div>`;
     weeklyChart.innerHTML = weeklyHTML;
 }
+
+//==========================
+//       SIDEBAR MENU
+//==========================
+const sidebar = document.getElementById("sidebar");
+const sidebarOverlay = document.getElementById("sidebar-overlay");
+const headerMenuBtn = document.getElementById("header-menu-btn");
+const sidebarCloseBtn = document.getElementById("sidebar-close-btn");
+
+// OPEN SIDEBAR
+headerMenuBtn.addEventListener("click", function () {
+    sidebar.classList.add("active");
+    sidebarOverlay.classList.add("active");
+});
+
+// CLOSE SIDEBAR
+sidebarCloseBtn.addEventListener("click", function () {
+    sidebar.classList.remove("active");
+    sidebarOverlay.classList.remove("active");
+});
+
+// CLOSE WHEN CLICKING OUTSIDE
+sidebarOverlay.addEventListener("click", function () {
+    sidebar.classList.remove("active");
+    sidebarOverlay.classList.remove("active");
+});
+
+//==========================
+//     DISPLAY PRODUCTS
+//==========================
+function displayProducts(data) {
+
+    productsGrid.innerHTML = "";
+
+    if (data.results.length === 0) {
+
+        productsGrid.innerHTML = `
+        <div class="col-span-full flex flex-col items-center justify-center py-20 text-center">
+            <div class="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center mb-5">
+                <i class="fa-solid fa-box-open text-4xl text-gray-400"></i>
+            </div>
+            <h3 class="text-xl font-semibold text-gray-600 mb-2">No products to display</h3>
+            <p class="text-gray-400">Search for a product or browse by category</p>
+        </div>
+        `;
+        productsCount.innerText = "Search for products to see results";
+        return;
+    }
+
+    productsCount.innerText = `${data.results.length} products`;
+
+    for (let product of data.results) {
+        productsGrid.innerHTML += productCard(product);
+    }
+
+    const productCards = document.querySelectorAll(".product-card");
+
+    for (let card of productCards) {
+
+        card.addEventListener("click", async function () {
+            const barcode = card.dataset.barcode;
+            const data = await getProductByBarcode(barcode);
+
+            if (!data.result) {
+                return;
+            }
+            showProductModal(data.result);
+        });
+    }
+}
+
+//==========================
+//     SEARCH PRODUCTS
+//==========================
+searchProductBtn.addEventListener("click", async function () {
+
+    const query = productSearchInput.value.trim();
+
+    if (query === "") {
+        return;
+    }
+
+    productsGrid.innerHTML = loadingSpinner();
+    const data = await searchProducts(query);
+    displayProducts(data);
+});
+
+//===============================
+//  SEARCH PRODUCTS PRESS ENTER
+//===============================
+productSearchInput.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") {
+        searchProductBtn.click();
+    }
+});
+
+//=============================
+//   LOOKUP PRODUCT BARCODE
+//=============================
+lookupBarcodeBtn.addEventListener("click", async function () {
+
+    const barcode = barcodeInput.value.trim();
+
+    if (barcode === "") {
+        return;
+    }
+
+    productsGrid.innerHTML = loadingSpinner();
+
+    const data = await getProductByBarcode(barcode);
+
+    productsGrid.innerHTML = "";
+
+    if (!data.result) {
+        productsCount.innerText = "0 products";
+        return;
+    }
+    productsCount.innerText = "1 product";
+
+    productsGrid.innerHTML = productCard(data.result);
+});
+
+//===============================
+//  LOOKUP PRODUCT PRESS ENTER
+//===============================
+barcodeInput.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") {
+        lookupBarcodeBtn.click();
+    }
+});
+
+//==========================
+//    DISPLAY CATEGORIES
+//==========================
+function displayCategories(data) {
+
+    productCategories.innerHTML = "";
+
+    for (let category of data.results) {
+
+        productCategories.innerHTML += `
+            <button
+                class="product-category-btn px-5 py-3 bg-blue-500 text-white rounded-xl text-sm font-semibold whitespace-nowrap hover:scale-105 transition-all"
+                data-category="${category.id}">
+                ${category.name}
+            </button>
+        `;
+    }
+
+    const categoryButtons = document.querySelectorAll(".product-category-btn");
+
+    for (let button of categoryButtons) {
+
+        button.addEventListener("click", async function () {
+
+            productsGrid.innerHTML = loadingSpinner();
+
+            const category = button.dataset.category;
+
+            const data = await getProductsByCategory(category);
+
+            displayProducts(data);
+        });
+    }
+}
+
+//==========================
+//       NUTRI-SCORE
+//==========================
+for (let button of nutriScoreButtons) {
+
+    button.addEventListener("click", async function () {
+
+        const grade = button.dataset.grade;
+        const query = productSearchInput.value.trim();
+
+        if (query === "") {
+            return;
+        }
+
+        productsGrid.innerHTML = loadingSpinner();
+
+        const data = await searchProducts(query);
+
+        if (grade === "") {
+            displayProducts(data);
+            return;
+        }
+
+        const filteredProducts = data.results.filter(function (product) {
+            return product.nutritionGrade === grade;
+        });
+
+        displayProducts({ results: filteredProducts });
+    });
+}
+
+const productModal = document.getElementById("product-modal");
+const productModalContent = document.getElementById("product-modal-content");
+const closeProductModal = document.getElementById("close-product-modal");
+
+function showProductModal(product) {
+
+    const nutrition = product.nutrients;
+
+    productModalContent.innerHTML = `
+        <div class="flex items-start gap-6 mb-8">
+            <div class="w-40 h-40 bg-gray-100 rounded-xl flex items-center justify-center">
+                <img
+                    src="${product.image}"
+                    class="w-full h-full object-contain rounded-xl"
+                    alt="${product.name}">
+            </div>
+            <div class="flex-1">
+                <p class="text-emerald-600 font-semibold">${product.brand || "Unknown Brand"}</p>
+                <h2 class="text-3xl font-bold text-gray-900 mb-2">${product.name}</h2>
+                <p class="text-gray-500 mb-4">Barcode: ${product.barcode}</p>
+                <div class="flex gap-3">
+                    <div class="bg-yellow-50 rounded-xl px-4 py-3">
+                        <div class="flex items-center gap-2">
+                            <span class="bg-yellow-400 text-white font-bold text-xl w-10 h-10 rounded-lg flex items-center justify-center">
+                                ${(product.nutritionGrade || "?").toUpperCase()}
+                            </span>
+                            <div>
+                                <p class="font-bold text-gray-900">Nutri-Score</p>
+                                <p class="text-xs text-gray-500">Nutrition Grade</p>
+                            </div>
+                        </div>
+                    </div>
+                    ${product.novaGroup ? `
+                        <div class="bg-red-50 rounded-xl px-4 py-3">
+                            <div class="flex items-center gap-2">
+                                <span class="bg-red-500 text-white font-bold text-xl w-10 h-10 rounded-full flex items-center justify-center">${product.novaGroup}</span>
+                                <div>
+                                    <p class="font-bold text-gray-900">NOVA</p>
+                                    <p class="text-xs text-gray-500">Processing Group</p>
+                                </div>
+                            </div>
+                        </div>` : ""}
+                </div>
+            </div>
+        </div>
+        <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-6 mb-6">
+            <h3 class="text-xl font-bold text-gray-900 mb-6">
+                <i class="fa-solid fa-chart-pie text-emerald-600 mr-2"></i>
+                Nutrition Facts
+                <span class="text-sm font-normal text-gray-500">(per 100g)</span>
+            </h3>
+            <div class="text-center mb-6">
+                <p class="text-4xl font-bold text-gray-900">${Math.round(nutrition.calories || 0)}</p>
+                <p class="text-gray-500">Calories</p>
+            </div>
+            <div class="grid grid-cols-4 gap-4">
+                <div class="text-center">
+                    <p class="text-2xl font-bold text-emerald-600">${Number(nutrition.protein || 0).toFixed(1)}g</p>
+                    <p class="text-sm text-gray-500">Protein</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-2xl font-bold text-blue-600">${Number(nutrition.carbs || 0).toFixed(1)}g</p>
+                    <p class="text-sm text-gray-500">Carbs</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-2xl font-bold text-purple-600">${Number(nutrition.fat || 0).toFixed(1)}g</p>
+                    <p class="text-sm text-gray-500">Fat</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-2xl font-bold text-orange-600">${Number(nutrition.sugar || 0).toFixed(1)}g</p>
+                    <p class="text-sm text-gray-500">Sugar</p>
+                </div>
+            </div>
+            <div class="border-t border-emerald-200 mt-6 pt-6 grid grid-cols-2 gap-4 text-center">
+                <div>
+                    <p class="text-xl font-bold text-gray-900">${Number(nutrition.fiber || 0).toFixed(1)}g</p>
+                    <p class="text-sm text-gray-500">Fiber</p>
+                </div>
+                <div>
+                    <p class="text-xl font-bold text-gray-900">${Number(nutrition.sodium || 0).toFixed(2)}g</p>
+                    <p class="text-sm text-gray-500">Sodium</p>
+                </div>
+            </div>
+        </div>
+        ${product.ingredients ? `
+            <div class="bg-gray-50 rounded-2xl p-6 mb-6">
+                <h3 class="text-xl font-bold text-gray-900 mb-3">
+                    <i class="fa-solid fa-list text-gray-600 mr-2"></i>
+                    Ingredients
+                </h3>
+                <p class="text-gray-600 leading-relaxed">${product.ingredients}</p>
+            </div>` : ""}
+        ${product.allergens ? `
+            <div class="bg-red-50 border border-red-200 rounded-2xl p-6 mb-6">
+                <h3 class="text-xl font-bold text-red-600 mb-3">
+                    <i class="fa-solid fa-triangle-exclamation mr-2"></i>
+                    Allergens
+                </h3>
+                <p class="text-red-600">${product.allergens}</p>
+            </div>` : ""}
+        <div class="grid grid-cols-2 gap-4">
+            <button id="log-product-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl py-4 font-bold">
+                <i class="fa-solid fa-plus mr-2"></i>
+                Log This Food
+            </button>
+            <button id="close-product-modal-btn" class="bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl py-4 font-bold">Close</button>
+        </div>
+    `;
+
+    productModal.classList.remove("hidden");
+
+    document.getElementById("log-product-btn").addEventListener("click", function () {
+
+        const foodLog = JSON.parse(localStorage.getItem("foodLog")) || [];
+
+        foodLog.push({
+            name: product.name,
+            thumbnail: product.image,
+            calories: Math.round(nutrition.calories || 0),
+            protein: Number(nutrition.protein || 0),
+            carbs: Number(nutrition.carbs || 0),
+            fat: Number(nutrition.fat || 0),
+            servings: 1,
+            date: new Date().toISOString()
+        });
+
+        localStorage.setItem("foodLog", JSON.stringify(foodLog));
+
+        productModal.classList.add("hidden");
+
+        updateFoodLog();
+        updateWeeklyOverview();
+    });
+
+    document.getElementById("close-product-modal-btn")
+        .addEventListener("click", function () {
+            productModal.classList.add("hidden");
+        });
+}
+
+closeProductModal.addEventListener("click", function () {
+    productModal.classList.add("hidden");
+});
+
+productModal.addEventListener("click", function (e) {
+    if (e.target === productModal) {
+        productModal.classList.add("hidden");
+    }
+});
+
+//==========================
+//      QUICK LOG BUTTONS
+//==========================
+const quickLogButtons = document.querySelectorAll(".quick-log-btn");
+
+// Log a Meal
+quickLogButtons[0].addEventListener("click", function () {
+
+    allRecipesSection.classList.remove("hidden");
+    searchFiltersSection.classList.remove("hidden");
+    mealCategoriesSection.classList.remove("hidden");
+
+    mealDetailsSection.classList.add("hidden");
+    scannerSection.classList.add("hidden");
+    foodLogSection.classList.add("hidden");
+
+    setActiveNav(mealsNav);
+});
+
+// Scan Product
+quickLogButtons[1].addEventListener("click", function () {
+
+    allRecipesSection.classList.add("hidden");
+    searchFiltersSection.classList.add("hidden");
+    mealCategoriesSection.classList.add("hidden");
+    mealDetailsSection.classList.add("hidden");
+
+    scannerSection.classList.remove("hidden");
+    foodLogSection.classList.add("hidden");
+
+    setActiveNav(scannerNav);
+});
+
+// Custom Entry
+quickLogButtons[2].addEventListener("click", function () {
+
+    // I DON'T KNOW WHAT SHOULD I DO IN THIS CASE 🤨 
+
+});
 
 //==========================
 //    START APP FUNCTION
@@ -715,7 +1114,12 @@ async function startApp() {
 
         displayMeals(data, "search", query)
     });
+
     updateFoodLog();
+
+    const productCategoriesData = await getProductCategories();
+
+    displayCategories(productCategoriesData);
 }
 
 startApp();
